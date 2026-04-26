@@ -15,7 +15,8 @@ class connectionPooler:
         self.pool.put(connection)
 
     def clean(self):
-        for conn in self.pool:
+        while not self.pool.empty():
+            conn = self.pool.get()
             conn.close()
         
 
