@@ -1,14 +1,14 @@
 import connection
+from ui import main as start_ui
 
 # main should create connection pooler and start the ui, but for now i put a simple demo here
 
 ## you can use connectionpooler to get and return connections that execute queries
-
 def main():
+    connection.init_pool()
+    cp = connection.get_pool()
 
-    connectionpool = connection.connectionPooler()
-
-    c = connectionpool.get()
+    c = cp.get()
     cur = c.cursor()
 
     cur.execute("""
@@ -19,9 +19,11 @@ def main():
 
     print(cur.fetchall())
 
-    connectionpool.release(c)
+    cp.release(c)
 
-    connectionpool.clean()
+    start_ui()
 
+    cp.clean()
 
-main()
+if __name__ == "__main__":
+    main()

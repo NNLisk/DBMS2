@@ -1,6 +1,21 @@
 import psycopg2
 from queue import Queue
 
+pool = None
+
+# singleton connectionpooler
+
+def init_pool():
+    global pool
+    pool = connectionPooler()
+
+def get_pool():
+    if pool is None:
+        raise RuntimeError("Pool not initialized, call init_pool() first")
+    return pool
+
+
+
 class connectionPooler:
 
     def __init__(self, poolSize=20):
@@ -18,7 +33,7 @@ class connectionPooler:
         while not self.pool.empty():
             conn = self.pool.get()
             conn.close()
-        
+                
 
 
 def getDBConnection():
@@ -38,7 +53,7 @@ def getDBConnection():
     return connection
 
 def execute(query, params=None):
-    conn = getDBConnection()
+    conn = get_pool().get()
     cursor = conn.cursor()
     
     cursor.execute(query, params or [])
