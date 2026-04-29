@@ -1,5 +1,6 @@
 import db_functionality as db
-from connection import init_pool, get_pool
+import connection
+from connection import get_pool
 import psycopg2
 
 def print_table(rows, headers=None):
@@ -25,6 +26,8 @@ def menu_header(title):
 
 def show_menu():
     menu_header("BiDi Database Management System")
+    current_user = connection.get_current_user() or "unknown"
+    print(f"  Current DB user: {current_user}\n")
     print("""
   1. List all employees
   2. List all projects
@@ -139,7 +142,7 @@ def add_project():
         print(f"\n  Constraint violation! {e}")
 
 def switch_user():
-    menu_header("Access Control Demo1")
+    menu_header("Access Control Demo")
     print("  1. bidiAdmin (full access)")
     print("  2. bidiReadOnly (SELECT only)")
     choice = input("\n  Choose user: ").strip()
@@ -153,30 +156,32 @@ def switch_user():
         return
 
     try:
-        conn = psycopg2.connect(database="bidi", user=user, password=pw,
-                                host="localhost", port="5432")
-        cur = conn.cursor()
-
+        # Validate credentials before switching the active pool.
+        test_conn = psycopg2.connect(database="bidi", user=user, password=pw,
+                                     host="localhost", port="5432")
+        test_cursor = test_conn.cursor()
         print(f"\n  Connected as {user}.")
 
         print("\n  Trying SELECT on employee...")
         try:
-            cur.execute("SELECT * FROM employee LIMIT 3")
-            print_table(cur.fetchall(), ["EmpID", "DepID", "Name", "Email"])
+            test_cursor.execute("SELECT * FROM employee LIMIT 3")
+            print_table(test_cursor.fetchall(), ["EmpID", "DepID", "Name", "Email"])
         except Exception as e:
-            conn.rollback()
+            test_conn.rollback()
             print(f"  SELECT denied: {e}")
 
         print(f"\n  Trying INSERT into employee as {user}...")
         try:
-            cur.execute("INSERT INTO employee VALUES (9999, 1, 'Test', 'test@test.com')")
-            conn.rollback()
+            test_cursor.execute("INSERT INTO employee VALUES (9999, 1, 'Test', 'test@test.com')")
+            test_conn.rollback()
             print("  INSERT allowed (rolled back).")
         except Exception as e:
-            conn.rollback()
+            test_conn.rollback()
             print(f"  INSERT denied: {e}")
 
-        conn.close()
+        test_conn.close()
+        connection.switch_user(user, pw)
+        print(f"\n  Active pool switched to user: {user}")
     except Exception as e:
         print(f"\n  Connection failed: {e}")
 
@@ -204,7 +209,7 @@ def custom_query():
         print(f"  Error: {e}")
 
 def main():
-    
+    connection.init_pool()
 
     actions = {
         "1": list_employees,
